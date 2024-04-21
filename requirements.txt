@@ -1,0 +1,11 @@
+torch
+torchvision
+torchaudio
+git+https://github.com/huggingface/transformers
+git+https://github.com/huggingface/diffusers
+accelerate
+evaluate
+huggingface_hub
+httpx
+fastapi
+uvicorn
