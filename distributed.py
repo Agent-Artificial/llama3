@@ -1,69 +1,37 @@
-import transformers
 import torch
-from accelerate.accelerator import Accelerator
-from tqdm.auto import tqdm
-from messages import create_message, create_response
-from data_models import Message
-from typing import Dict, List, Union
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from datasets import load_dataset 
+from random import randint
+from 
 
 
-def generate_text(messages: Union[List[Message], Dict[str, str]]) -> Dict[str, str]:
-    """
-    Generates text based on a given prompt using a pre-trained model.
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Meta-Llama-3-70B-Instruct")
 
-    Args:
-        prompt (str, optional): The prompt for text generation. Defaults to "tell me a bit about yourself".
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-70B-Instruct")
 
-    Returns:
-        None
-    """
 
-    accelerator = Accelerator()
+# Load our test dataset
+eval_dataset = load_dataset("json", data_files="test_dataset.json", split="train")
+rand_idx = randint(0, len(eval_dataset))
+messages = eval_dataset[rand_idx]["messages"][:2]
 
-    args = {
-        "model_id": "meta-llama/Meta-Llama-3-70B-Instruct",
-        "mode": "text-generation",
-        "max_train_steps": 1000,
-        "model_kwargs": {"torch_dtype": torch.bfloat16},
-        "device": accelerator.device,
-        "messages": messages,
-        "max_new_tokens": 16000,
-        "do_sample": True,
-        "temperature": 0.2,
-        "top_p": 0.9,
-    }
+tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
 
-    tqdm(range(args['max_train_steps']), disable=not accelerator.is_local_main_process)
+# Test on sample 
+input_ids = tokenizer.apply_chat_template(messages,add_generation_prompt=True,return_tensors="pt").to(model.device)
+attention = model.forward(input_ids)
+outputs = model.generate(
+    input_ids,
+    max_new_tokens=512,
+    eos_token_id= tokenizer.eos_token_id,
+    do_sample=True,
+    temperature=0.6,
+    top_p=0.9,
+    pad_token_id=tokenizer.eos_token_id
 
-    pipeline = transformers.pipeline(
-        args['mode'],
-        model=args['model_id'],
-        model_kwargs=args['model_kwargs'],
-        device=args['device'],
-    )
+)
+response = outputs[0][input_ids.shape[-1]:]
 
-    prompt = pipeline.tokenizer.apply_chat_template(  # type: ignore
-            args['messages'],
-            tokenize=False, 
-            add_generation_prompt=True
-    )  
-
-    terminators = [
-        pipeline.tokenizer.eos_token_id,  # type: ignore
-        pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")  # type: ignore
-    ]
-
-    pipeline = accelerator.prepare(pipeline)
-
-    outputs = pipeline(
-        prompt,
-        max_new_tokens=args['max_new_tokens'],
-        eos_token_id=terminators,
-        do_sample=args['do_sample'],
-        temperature=args['temperature'],
-        top_p=args['top_p']
-
-    )
-    response = outputs[0]["generated_text"][len(prompt):]
-    message = create_message(response, "assistant")
-    return create_response(message=message)
+print(f"**Query:**\n{eval_dataset[rand_idx]['messages'][1]['content']}\n")
+print(f"**Original Answer:**\n{eval_dataset[rand_idx]['messages'][2]['content']}\n")
+print(f"**Generated Answer:**\n{tokenizer.decode(response,skip_special_tokens=True)}")

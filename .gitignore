@@ -1,3 +1,5 @@
 .venv
 __pycache__
 context.json
+.env
+

@@ -35,7 +35,7 @@ def create_response(
 
     choices: List[Dict[str, Union[int, Dict[str, str], None, str]]] = [{
         "index": 0,
-        "message": message.model_dump(),
+        "message": message.dict(exclude_unset=True),
         "logprobs": None,
         "finish_reason": "stop"
     }]
@@ -52,7 +52,7 @@ def create_response(
         system_fingerprint = system_fingerprint,
         choices = choices,
         usage = usage
-        ).model_dump()
+        ).dict(exclude_unset=True)
 
 def create_message(input_text: str, role: str = "user") -> Message:
     """
