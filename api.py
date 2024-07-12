@@ -64,7 +64,7 @@ def text_generation(request: RequestObject):
 
 
 if __name__ == "__main__":
-    uvicorn.run("api:app", host=HOST, port=PORT, reload=RELOAD)
+    uvicorn.run("api:app", host=HOST, port=9099, reload=RELOAD)
 #    response = text_generation(RequestObject(messages=[Message(role="user", content="hello")], model = "Llama3-70b"))
 #
 #    print(response.body)
