@@ -1,0 +1,24 @@
+services:
+  llama3:
+    build: .
+    command:
+      - "python"
+      - "/app/api.py"
+    ports:
+      - 7099:7099
+    environment:
+      - HOST=$HOST
+      - PORT=$PORT
+      - HF_TOKEN=$HF_TOKEN
+    volumes:
+      - ~/.cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: always
+
+    
